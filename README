@@ -1,0 +1,8 @@
+ScalaSWT is an open source library for the implementation of SWT/JFace applications. It makes possible to write GUI code in a Scala DSL which try to be more readable and concise than in plain Java.
+
+This library is currently only my personal effort and it is a very first version with an experimental character.
+
+You are free to use it or change it but it is on your own responsibility. I don't grant any guaranties for this software.
+
+Enjoy it,
+Antonio R. Rodriguez Santiesteban.
