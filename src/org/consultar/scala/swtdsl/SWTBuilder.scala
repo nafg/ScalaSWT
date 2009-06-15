@@ -1,24 +1,33 @@
 package org.consultar.scala.swtdsl
 
 import org.eclipse.swt._
+import org.eclipse.swt.graphics.Image
 import org.eclipse.swt.layout._
 import org.eclipse.swt.widgets._
 import org.eclipse.swt.events._
 import org.eclipse.core.databinding.observable.Realm
 import org.eclipse.core.databinding.DataBindingContext
 import org.eclipse.jface.databinding.swt.SWTObservables
+import java.io.InputStream
 
-abstract class SWTBuilder extends Binding {
-  private[this] var currentParent: Composite = null
+abstract class SWTBuilder extends Layouts with Styles with Binding {
+  private[this] val display: Display = new Display
+  private[this] var currentParent: Composite = _
   
   def this(composite: Composite) {
     this()
     currentParent = composite
   }
+  
+  def withParent(parent: Composite)(code: =>Any) = {
+    val oldParent = currentParent
+    currentParent = parent
+    code
+    currentParent = oldParent
+  }
 
   def run() {
     val shell = currentParent.getShell
-    val display = shell.getDisplay
     shell.pack()
     shell.open()
     Realm.runWithDefault(SWTObservables.getRealm(display), new Runnable {
@@ -32,7 +41,6 @@ abstract class SWTBuilder extends Binding {
   }
   
   def shell(setups: (Shell => Unit)*)(block: => Unit): Shell = {
-    val display = new Display
     currentParent = new Shell(display)
     currentParent.setLayout(new FillLayout)
     val shell = currentParent.asInstanceOf[Shell]
@@ -41,7 +49,19 @@ abstract class SWTBuilder extends Binding {
     shell
   }
 
+  def shell(style: ShellStyle)(setups: (Shell => Unit)*)(block: => Unit): Shell = {
+    val shell = new Shell(display, style.value)
+    shell.setLayout(new FillLayout)
+    currentParent = shell
+    setups.foreach(_(shell))
+    block
+    shell
+  }
+
   def title(t: String)(titled: {def setText(t: String)}) = titled.setText(t)
+  def icon(image: Image)(target: {def setImage(image: Image)}) = target.setImage(image)
+  def icon(image: String)(target: {def setImage(image: Image)}) = target.setImage(new Image(display, image))
+  def icon(image: InputStream)(target: {def setImage(image: Image)}) = target.setImage(new Image(display, image))
 
   def composite(setups: (Composite => Unit)*)(block: => Unit): Composite = {
     currentParent = new Composite(currentParent, SWT.NONE)
@@ -61,54 +81,6 @@ abstract class SWTBuilder extends Binding {
     currentParent = currentParent.getParent
     group
   }
-  
-  def rowLayout(setups: (RowLayout => Unit)*)(composite: Composite): RowLayout = {
-  	val layout = new RowLayout
-    setups.foreach(_(layout))
-  	composite.setLayout(layout)
-  	layout
-  }
-  
-  def gridLayout(setups: (GridLayout => Unit)*)(composite: Composite): GridLayout = {
-    val layout = new GridLayout
-    setups.foreach(_(layout))
-    composite.setLayout(layout)
-    layout
-  }
-  
-  def horizontal(settings: GridCell => Unit*)(target: Control): Unit = {
-    val data = target.getLayoutData() match {
-      case x: GridData => x
-      case _ => new GridData
-    }
-    val cell = new GridCell(data.horizontalSpan=_,
-                            data.horizontalAlignment=_,
-                            data.grabExcessHorizontalSpace=_)
-    settings foreach(_(cell))
-    target.setLayoutData(data)
-  }
-
-  def vertical(settings: GridCell => Unit*)(target: Control) = {
-    val data = target.getLayoutData() match {
-      case x: GridData => x
-      case _ => new GridData
-    }
-    val cell = new GridCell(data.verticalSpan=_,
-                            data.verticalAlignment=_,
-                            data.grabExcessVerticalSpace=_)
-    settings foreach(_(cell))
-    target.setLayoutData(data)
-  }
-
-  def grabExcessSpace(target:GridCell) = target.grabExcessSpace(true)
-
-  def fill(target:GridCell) = target.align(SWT.FILL)
-  
-  def beginning(target: GridCell) = target.align(SWT.BEGINNING)
-  
-  def end(target: GridCell) = target.align(SWT.END)
-
-  def columns(n: Int)(layout: GridLayout) = layout.numColumns = n
 
   def label(t: String, setups: Label => Unit*): Label = {
 		  val label = new Label(currentParent, SWT.NONE)
@@ -166,5 +138,3 @@ abstract class SWTBuilder extends Binding {
   
   def selected(widget: {def setSelection(b: Boolean)}) = widget.setSelection(true)
 }
-
-private class GridCell(val span: Int => Unit, val align: Int => Unit, val grabExcessSpace: Boolean => Unit)

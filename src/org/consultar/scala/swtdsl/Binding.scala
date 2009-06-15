@@ -4,7 +4,7 @@ import _root_.scala.collection.mutable.ListBuffer
 
 import org.eclipse.swt.SWT
 import org.eclipse.swt.widgets._
-import _root_.org.eclipse.core.databinding.beans.PojoObservables
+import org.eclipse.core.databinding.beans.PojoObservables
 import org.eclipse.core.databinding.DataBindingContext
 import org.eclipse.core.databinding.observable.{IChangeListener, IStaleListener, Realm}
 import org.eclipse.core.databinding.observable.value.{IObservableValue, IValueChangeListener}
@@ -37,10 +37,13 @@ trait Binding {
   
   private class ObservableProperty[T <: Any](val property: Property[T]) extends IObservableValue {
 
-    private val delegate = PojoObservables.observeValue(new Object {
-                                                  			def setProperty(v: T) = property.setter(v)
-                                                  			def getProperty() = property.getter()
-    													}, "property")
+    private val delegate = 
+      PojoObservables.observeValue(
+        new Object {
+          def setProperty(v: T) = property.setter(v)
+          def getProperty() = property.getter()
+        }, "property"
+      )
     
     override def addValueChangeListener(listener: IValueChangeListener) = delegate.addValueChangeListener(listener)
     
