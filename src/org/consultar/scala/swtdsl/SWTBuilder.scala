@@ -41,9 +41,9 @@ abstract class SWTBuilder extends Layouts with Styles with Binding {
   }
   
   def shell(setups: (Shell => Unit)*)(block: => Unit): Shell = {
-    currentParent = new Shell(display)
-    currentParent.setLayout(new FillLayout)
-    val shell = currentParent.asInstanceOf[Shell]
+    val shell = new Shell(display)
+    shell.setLayout(new FillLayout)
+    currentParent = shell
     setups.foreach(_(shell))
     block
     shell
