@@ -18,25 +18,24 @@ abstract class SWTBuilder extends Layouts with Styles with Binding {
     this()
     currentParent = composite
   }
-  
-  def withParent(parent: Composite)(code: =>Any) = {
-    val oldParent = currentParent
-    currentParent = parent
-    code
-    currentParent = oldParent
-  }
 
   def run() {
+    def withDisplaysRealm[T >: Null](block: => T): T = {
+      var ret: T = null
+      Realm.runWithDefault(
+        SWTObservables.getRealm(display), new Runnable {
+          def run() = ret = block
+        }
+      )
+      ret
+    }
+
     val shell = currentParent.getShell
-    shell.pack()
-    shell.open()
-    Realm.runWithDefault(SWTObservables.getRealm(display), new Runnable {
-                           override def run() {
-                             setupBindings()
-                             while(!shell.isDisposed)
-                               if(!display.readAndDispatch()) display.sleep()
-                           }
-                         })
+    withDisplaysRealm {
+      setupBindings()
+      while(!shell.isDisposed)
+        if(!display.readAndDispatch()) display.sleep()
+    }
     display.dispose()
   }
   
@@ -46,6 +45,8 @@ abstract class SWTBuilder extends Layouts with Styles with Binding {
     currentParent = shell
     setups.foreach(_(shell))
     block
+    shell.pack()
+    shell.open()
     shell
   }
 
@@ -55,6 +56,8 @@ abstract class SWTBuilder extends Layouts with Styles with Binding {
     currentParent = shell
     setups.foreach(_(shell))
     block
+    shell.pack()
+    shell.open()
     shell
   }
 
@@ -62,6 +65,11 @@ abstract class SWTBuilder extends Layouts with Styles with Binding {
   def icon(image: Image)(target: {def setImage(image: Image)}) = target.setImage(image)
   def icon(image: String)(target: {def setImage(image: Image)}) = target.setImage(new Image(display, image))
   def icon(image: InputStream)(target: {def setImage(image: Image)}) = target.setImage(new Image(display, image))
+  
+  def byClose(handler: Event => Unit)(s: Shell) = s.addListener(SWT.Close, 
+                                                                new Listener {
+                                                                  def handleEvent(e: Event) = handler(e)
+                                                                })
 
   def composite(setups: (Composite => Unit)*)(block: => Unit): Composite = {
     currentParent = new Composite(currentParent, SWT.NONE)

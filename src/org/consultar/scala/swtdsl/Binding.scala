@@ -8,7 +8,7 @@ import org.eclipse.core.databinding.beans.PojoObservables
 import org.eclipse.core.databinding.DataBindingContext
 import org.eclipse.core.databinding.observable.{IChangeListener, IStaleListener, Realm}
 import org.eclipse.core.databinding.observable.value.{IObservableValue, IValueChangeListener}
-import org.eclipse.jface.databinding.swt.SWTObservables
+import org.eclipse.jface.databinding.swt.{SWTObservables, ISWTObservableValue}
 
 trait Binding {
 
@@ -17,13 +17,18 @@ trait Binding {
   protected def emptyBinding() = (c: Control) => dbc
 
   protected def bind[T <: Any](setter: T => Unit, getter: () => T)(target: Control): DataBindingContext = {
-    val property = new Property[T](setter, getter)
-    target match {
+    val controlValue = target match {
       case t: Text =>
-        dbc.bindValue(SWTObservables.observeText(target, SWT.Modify), new ObservableProperty(property), null, null)
+        SWTObservables.observeText(target, SWT.Modify)
       case _ =>
-        dbc.bindValue(SWTObservables.observeSelection(target), new ObservableProperty(property), null, null)
+        SWTObservables.observeSelection(target)
     }
+    val property = new Property[T](setter, getter)
+    dbcBind(controlValue, new ObservableProperty(property))
+  }
+  
+  private def dbcBind(controlValue: ISWTObservableValue, modelValue: IObservableValue) = {
+    dbc.bindValue(controlValue, modelValue, null, null)
     dbc
   }
   
